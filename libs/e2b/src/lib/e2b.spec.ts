@@ -1,5 +1,5 @@
 import {pythonInterpreter, simple_run} from "@e2b/e2b";
-import {test} from "vitest";
+import {expect, test} from "vitest";
 import {codeForMe, executeCode} from "@e2b/e2b";
 
 test('get_host_name', async () => {
@@ -8,16 +8,19 @@ test('get_host_name', async () => {
 });
 
 test('python_interpreter', async () => {
-  const data = await pythonInterpreter(console.log);
-  expect(data).toMatch(/e2b.dev/);
+  const {result,error, artifacts} = await pythonInterpreter('print("Hello E2B!")');
+  expect(result).toMatch("Hello E2B!");
+  expect(error).toBeNaN();
+  expect(artifacts).toHaveLength(1);
 })
+
 
 test('code_snippet', async () => {
   const {code,content} = await codeForMe();
   await executeCode(code);
-  const {stdout, stderr} = await executeCode(code);
-  console.log(stdout);
-  console.error(stderr);
+  const {error, result} = await executeCode(code);
+  console.log(error, result);
+  expect(error).toBeNaN(); 
 }, 60000)
 
 

@@ -85,6 +85,10 @@ export async function codeForMe(prompt: string="Generate first 100 fibonacci num
 
 export async function executeCode(code: string) {
     // Execute the code using E2B.
-    return  await runCode(CodeRuntime.Node16, code);
+    const {stdout, stderr}  = await runCode(CodeRuntime.Node16, code);
+    return {
+        result: stdout,
+        error: stderr === ''? NaN : stderr
+    }
 }
     
