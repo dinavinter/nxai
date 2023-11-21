@@ -4,12 +4,12 @@ import {codeForMe, executeCode} from "@e2b/e2b";
 
 test('get_host_name', async () => {
   const data = await simple_run();
-  expect(data).toMatch('.*.e2b.dev');
+  expect(data).toMatch(/e2b.dev/)
 });
 
-test('e2b_interceptor', async () => {
+test('python_interpreter', async () => {
   const data = await pythonInterpreter(console.log);
-  expect(data).toMatch('.*.e2b.dev');
+  expect(data).toMatch(/e2b.dev/);
 })
 
 test('code_snippet', async () => {
@@ -18,7 +18,7 @@ test('code_snippet', async () => {
   const {stdout, stderr} = await executeCode(code);
   console.log(stdout);
   console.error(stderr);
-})
+}, 60000)
 
 
  
