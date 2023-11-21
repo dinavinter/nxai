@@ -30,6 +30,33 @@ Run `pnpm nx list` to get a list of available plugins and whether they have gene
 
 Learn more about [Nx generators on the docs](https://nx.dev/plugin-features/use-code-generators).
 
+### Generate a js library
+
+```bash
+pnpm nx g @nx/js:lib <lib name> --directoryName=libs/<lib name>
+```
+
+### Generate app
+
+```bash
+pnpm nx g @nx/js:app <app name> --directoryName=apps/<app name>
+```
+
+### Or react app
+
+```bash
+pnpm add -D @nx/react
+pnpm nx g @nx/react:app <app name> --directoryName=apps/<app name>
+```
+
+## Import libs in workspace
+
+```typescript
+import {code} from '@e2b/<lib name>'
+
+```
+
+
 ## Running tasks
 
 To execute tasks with Nx use the following syntax:
