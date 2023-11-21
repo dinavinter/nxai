@@ -1,6 +1,6 @@
 import {pythonInterpreter, simple_run} from "@e2b/e2b";
 import {test} from "vitest";
-import {codeForMe, executeCode} from "./codeWriter";
+import {codeForMe, executeCode} from "@e2b/e2b";
 
 test('get_host_name', async () => {
   const data = await simple_run();

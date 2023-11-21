@@ -35,6 +35,7 @@
         "jestConfig": "libs/cli/jest.config.ts"
       }
     }
+   
   },
   "tags": []
 }

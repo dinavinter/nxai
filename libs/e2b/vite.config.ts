@@ -38,4 +38,10 @@ export default defineConfig({
       external: [],
     },
   },
+  test:{
+    globals: true,
+    environment: 'node',
+    testTimeout: 10000,
+    reporters: ['default']
+  }
 });

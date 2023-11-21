@@ -2,7 +2,6 @@ import e2b, {CodeRuntime, runCode} from "@e2b/sdk";
 import OpenAI from "openai";
 import { Stream } from "openai/streaming";
 import {ChatCompletion, ChatCompletionChunk} from "openai/resources";
-import 'dotenv';
 // The OpenAI functions we want to use in our model.
 const functions = [
     {
@@ -55,7 +54,7 @@ async function parseGptResponse(response: ChatCompletion) {
 const openai = new OpenAI();
 export async function codeForMe(prompt: string="Generate first 100 fibonacci numbers") {
     const chatCompletion = await openai.chat.completions.create({
-        model: "gpt-4", // Or use 'gpt-3.5-turbo'
+        model: "gpt-3.5-turbo", // Or use 'gpt-3.5-turbo'
         messages: [
             {
                 role: "system",
