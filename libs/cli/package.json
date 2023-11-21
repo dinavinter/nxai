@@ -1,0 +1,10 @@
+{
+  "bin": "./src/cli.js",
+  "scripts": {
+    "build": "nx run cli:build",
+    "watch": "nx run cli:build --watch",
+    "cli": "node dist/packages/cli"
+  },
+  "name": "sbx",
+  "version": "0.0.1"
+}

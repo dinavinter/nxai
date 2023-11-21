@@ -1,0 +1,24 @@
+{
+  "compileOnSave": false,
+  "compilerOptions": {
+    "rootDir": ".",
+    "sourceMap": true,
+    "declaration": false,
+    "moduleResolution": "node",
+    "emitDecoratorMetadata": true,
+    "experimentalDecorators": true,
+    "importHelpers": true,
+    "target": "ES2022",
+    "module": "esnext",
+    "lib": ["es2020", "dom"],
+    "skipLibCheck": true,
+    "skipDefaultLibCheck": true,
+    "baseUrl": ".",
+    "paths": {
+      "@e2b/e2b": ["libs/e2b/src/index.ts"],
+      "@e2b/weaviate": ["libs/weaviate/src/index.ts"],
+      "sbx": ["libs/cli/src/index.ts"]
+    }
+  },
+  "exclude": ["node_modules", "tmp"]
+}

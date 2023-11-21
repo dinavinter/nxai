@@ -1,0 +1,5 @@
+.nx/cache
+.env
+tmp/
+node_modules/
+dist/
