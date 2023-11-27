@@ -1,0 +1,175 @@
+import { OAuthConfig, OAuthUserConfig } from "next-auth/providers";
+import { TokenSet } from "next-auth";
+import { env } from "../../env/server.mjs";
+
+/*
+  * This is an example of how to implement a generic Gigya provider.
+  * it can be used when you want to create a base line for your Gigya clients, but want to use different Gigya OPs in your system.
+  * example use cases can be:
+  *    when you have different Gigya OPs for different environments.
+  *    when you initialize the different child sites of the same group with different security settings, so you can elevate the security by the context of the request. (like trigger RBA on checkout page, but not on the home page)
+  *    use different RPs for branding purposes.
+  *
+ setup:
+  1. create a gigya RP in gigya - for each implementation (https://console.gigya.com/[partner]/[api-key]/security/connect/oidc)
+  2. set the redirect URI to configured to: [origin]/api/auth/callback/[provider-name] (provider-name is the name of the provider in the config)
+  3. create a .env file at the root of your project and add the client ID, client Secret and discovery URL .
+  * GIGYA_CHECKOUT_CLIENT_ID=[your-gigya-client-id]
+  * GIGYA_CHECKOUT_CLIENT_SECRET=[your-gigya-client-secret]
+  * GIGYA_CHECKOUT_DISCOVERY_URL=https://[your-gigya-domain]/[your-gigya-api-key]/.well-known/openid-configuration
+  * GIGYA_CHECKOUT_CLIENT_ID=[your-gigya-client-id]
+  * GIGYA_ADMIN_CLIENT_ID=[your-gigya-client-secret]
+  * GIGYA_ADMIN_CLIENT_SECRET=[your-gigya-client-secret]
+  * GIGYA_ADMIN_DISCOVERY_URL=https://[your-gigya-domain]/[your-gigya-api-key]/.well-known/openid-configuration
+  * GIGYA_LAND_CLIENT_ID=[your-gigya-client-id]
+  * GIGYA_LAND_DISCOVERY_URL=https://[your-gigya-domain]/[your-gigya-api-key]/.well-known/openid-configuration
+
+    * and so on...
+  4. add a custom provider to your application at server/gigya-provider.ts 
+  5. add auth route to your application pages/api/auth/[...nextauth].ts
+ */
+
+/* 4  copy paste to server/gigya-provider.ts */
+/* this is not available in next-auth providers yet, so we need to add it manually */
+
+export default function GigyaProvider<P extends OidcProfile>(
+  options: OAuthUserConfig<P>
+): OAuthConfig<P> {
+  return {
+    id: "gigya",
+    name: "gigya",
+    type: "oauth",
+    checks: ["pkce", "state"],
+    authorization: { params: { scope: "openid email profile role" } },
+    profile(user: P, token: TokenSet) {
+      return {
+        id: user.sub,
+        name: user.name,
+        email: user.email,
+        image: user.picture,
+        //save the token for later use of authJS
+        token: token,
+
+        //map role from oidc claim to user object, require using of custom claims in gigya and correct scope "role".
+        role: user.role,
+        superAdmin: user.role === "superAdmin",
+        organizations: user.organizations,
+      };
+    },
+    style: {
+      logo: "/gigya.svg",
+      logoDark: "/gigya-dark.svg",
+      bg: "#fff",
+      text: "#7289DA",
+      bgDark: "#7289DA",
+      textDark: "#fff",
+    },
+    options,
+  };
+}
+
+/*5. add auth route to your application 
+ copy paste to pages/api/auth/[...nextauth].ts
+ */
+
+// Path: pages/api/auth/[...nextauth].ts
+import NextAuth from "next-auth";
+import { env } from "../../env/server.mjs";
+import GigyaProvider,{GigyaProfile} from "./server/gigya-provider";
+const handler = NextAuth({
+  providers: [
+    GigyaProvider<GigyaProfile>({
+      /* the id will be used in
+       * the callback url (api/auth/callback/landing-page)
+       * in the session object (session.provider)
+       * and in signIn api (signIn("landing-page"))
+       */
+      id: "landing-page",
+      name: "landing-page",
+      wellKnown: env.GIGYA_LAND_DISCOVERY_URL,
+      clientId: env.GIGYA_LAND_CLIENT_ID,
+      clientSecret: env.GIGYA_LAND_CLIENT_SECRET,
+      checks: ["state", "nonce", "pkce"],
+      authorization: { params: { scope: "openid email profile" } },
+    }),
+    GigyaProvider<GigyaProfile>({
+      id: "checkout",
+      name: "checkout",
+      idToken: true,
+      wellKnown: env.GIGYA_CHECKOUT_DISCOVERY_URL,
+      clientId: env.GIGYA_CHECKOUT_CLIENT_ID,
+      clientSecret: env.GIGYA_CHECKOUT_CLIENT_SECRET,
+      checks: ["state", "nonce", "pkce"],
+      authorization: { params: { scope: "openid email profile" } },
+      client: {
+        default_max_age: 3 * 360 * 60 * 1000, //3 hours
+      },
+    }),
+    GigyaProvider<GigyaProfile>({
+      id: "admin",
+      name: "admin",
+      idToken: true,
+      wellKnown: env.GIGYA_ADMIN_DISCOVERY_URL,
+      clientId: env.GIGYA_ADMIN_CLIENT_ID,
+      clientSecret: env.GIGYA_ADMIN_CLIENT_SECRET,
+      authorization: {
+        //the additional here of acr_values to the authorization request, it's not specially related to this example, but can be used to trigger TFA in Gigya OP regardless of RBA settings .
+        params: { scope: "openid email profile role organizations", acr_values: "loa:30" },
+      },
+      checks: ["state", "nonce", "pkce"],
+      client: {
+        default_max_age: 40 * 60 * 1000, //40 minutes
+      },
+    }),
+  ],
+});
+
+export { handler as GET, handler as POST };
+
+/* 6. use the provider in your pages and API routes. We will use 2 different ways to accomplish that, for example purposes */
+
+/* 6.1 implement checkout page with server side page handler
+ * https://next-auth.js.org/tutorials/securing-pages-and-api-routes#server-side
+ */
+import { getServerSession } from "next-auth/next";
+import { signIn, useSession } from "next-auth/react";
+import { authOptions } from "./api/auth/[...nextauth]";
+
+export default function Page() {
+  const { data: session } = useSession(); 
+  if (typeof window === "undefined") return null;
+  if (session) {
+    return ( <h1>Checkout</h1>);
+  }
+  return <button onClick={() => signIn("checkout")}>Sign in</button>;
+}
+
+export async function getServerSideProps(context) {
+  return {
+    props: {
+      session: await getServerSession(context.req, context.res, authOptions),
+      callbacks: {
+        authorized: ({ user, token, session }) =>
+          token.acr === "loa:20" && session.provider === "checkout",
+      },
+    },
+  };
+}
+
+/* 6.2   implement admin protection with next middleware
+ * https://next-auth.js.org/tutorials/securing-pages-and-api-routes#nextjs-middleware
+ */
+import { withAuth } from "next-auth/middleware";
+export default withAuth(
+  // `withAuth` augments your `Request` with the user's token.
+  function middleware(req) {
+    console.log(req.nextauth.token);
+  },
+  {
+    callbacks: {
+      authorized: ({ token }) => token?.role === "admin" && token?.acr === "loa:30",
+    },
+  }
+);
+
+export const config = { matcher: ["/admin/:path*"] };

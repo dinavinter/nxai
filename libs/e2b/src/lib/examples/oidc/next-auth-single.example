@@ -1,0 +1,128 @@
+/*
+[simple gigya provider with next-auth. reference: https://next-auth.js.org/configuration/providers/oauth#using-a-custom-provider]
+  setup:
+  1. create a gigya RP in gigya (https://console.gigya.com/[partner]/[api-key]/security/connect/oidc)
+  2. set the redirect URI to configured to: [origin]/api/auth/callback/gigya
+  3. create a .env file at the root of your project and add the client ID, client Secret and discovery URL .
+  GIGYA_CLIENT_ID=[your-gigya-client-id]
+  GIGYA_CLIENT_SECRET=[your-gigya-client-secret]
+  GIGYA_DISCOVERY_URL=https://[your-gigya-domain]/[your-gigya-api-key]/.well-known/openid-configuration
+
+  4. add auth route to your application pages/api/auth/[...nextauth].ts
+
+*/
+
+// Path: pages/api/auth/[...nextauth].ts
+import NextAuth, { TokenSet, User } from "next-auth";
+import { env } from "../../env/server.mjs";
+const handler = NextAuth({
+  providers: [
+    {
+      id: "gigya",
+      name: "gigya",
+      type: "oauth",
+      wellKnown: env.GIGYA_DISCOVERY_URL,
+      idToken: true,
+      client: {
+        //pkce is optional, but recommended, you need to enable it in your Gigya RP settings
+        checks: ["state", "nonce", "pkce"],
+        token_endpoint_auth_method: "client_secret_basic",
+        client_id: env.GIGYA_CLIENT_ID,
+        client_secret: env.GIGYA_CLIENT_SECRET,
+      },
+      authorization: { params: { scope: "openid email profile role" } },
+      profile(profile: GigyaProfile, token: TokenSet) {
+        return {
+          id: profile.sub,
+          name: profile.given_name + " " + profile.family_name,
+          email: profile.email,
+          image: profile.picture,
+
+          //map role from oidc claim to user object, require using of custom claims in gigya and correct scope "role".
+          role: profile.role,
+          superAdmin: profile.role === "superAdmin",
+          organizations: profile.organizations,
+        };
+      },
+      style: {
+        logo: "/login.svg",
+        logoDark: "/login-dark.svg",
+        bg: "#fff",
+        text: "#7289DA",
+        bgDark: "#7289DA",
+        textDark: "#fff",
+      },
+    },
+  ],
+  callbacks: {
+    /* use signIn callback to add additional validation to the sign in process */
+    signIn: async ({ user, profile }) => {
+      return (await externalCheck({ user, profile })) || "/unauthorized";
+      async function externalCheck<P>({
+        user,
+        profile,
+      }: {
+        user: User /*transformed to next system user*/;
+        profile: P /* as provided from gigya provider */;
+      }) {
+        //e.g check external source for user status
+        return true;
+      }
+    },
+  },
+});
+
+export { handler as GET, handler as POST };
+
+
+// frontend usage in react for example, Frontend - Add React Hook
+//The useSession() React Hook in the NextAuth.js client is the easiest way to check if someone is signed in.
+// components/login-btn.jsx
+import React from "react";
+import { useSession, signIn, signOut } from "next-auth/react";
+export default function Component() {
+  const { data: session } = useSession();
+  if (session) {
+    return (
+      <>
+        Signed in as {session.user.email} <br />
+        <button onClick={() => signOut()}>Sign out</button>
+      </>
+    );
+  }
+  return (
+    <>
+      Not signed in <br />
+      <button onClick={() => signIn("gigya")}>Sign in</button>
+    </>
+  );
+}
+
+
+/* typing for Gigya profile  */
+
+// custom claims additional to oidc claims, mapped in Gigya OP settings
+interface GigyaProfile extends OidcProfile {
+  // mapped from data.role in Gigya OP settings
+  role: string;
+
+  // mapped from data.interactions in Gigya OP settings
+  interactions: string[];
+}
+// default oidc claims
+export interface OidcProfile extends Record<string, any> {
+  aud: string;
+  email: string;
+  email_verified: boolean;
+  exp: number;
+  family_name: string;
+  given_name: string;
+  iat: number;
+  iss: string;
+  jti: string;
+  name: string;
+  nbf: number;
+  picture: string;
+  sub: string;
+  acr: string;
+}

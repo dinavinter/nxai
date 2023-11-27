@@ -1,0 +1,108 @@
+import { Application, Router } from "https://deno.land/x/oak/mod.ts";
+import * as log from "https://deno.land/std@0.202.0/log/mod.ts";
+
+log.setup({
+    handlers: {
+        console: new log.handlers.ConsoleHandler("DEBUG"),
+    },
+
+    loggers: {
+        "idp-proxy": {
+            level: "DEBUG",
+            handlers: ["console"],
+        },
+    },
+});
+
+function logger() {
+    return log.getLogger("idp-proxy");
+}
+
+const app = new Application();
+const router = new Router(); 
+
+router.get("/oidc", (ctx) => {
+    const apiKey = Deno.env.get("GIGYA_API_KEY");
+    const mode=ctx.request.url.searchParams.get('mode');
+    const context=ctx.request.url.searchParams.get('context');
+    const errorMessage =ctx.request.url.searchParams.get('error');
+
+    ctx.response.body  = `  
+                <html lang="en">
+                <head>
+                    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/1.11.2/jquery.js"></script>
+                </head>
+                <body> 
+                 
+                <script src="https://cdns.eu1.gigya.com/js/gigya.js?apikey=${apiKey}" async ></script>
+                <script>
+                
+                    const mode = "${mode}";
+                    const context = "${context}";
+                    const errorMessage = "${errorMessage}";
+                    const apiKey = "${apiKey}";
+                    
+                    async function handleOidc( ) {
+                        switch (mode) {
+                            case "forceLogin":
+                                await gigya._.apiAdapters.web.tokenStore.remove();
+                            case "login":
+                            case "passiveLogin":
+                            case "afterConsent":
+                                await oidcLogin();
+                                break;
+                            case "error":
+                                throw errorMessage;
+                            default:
+                                throw 'dont know what to do with mode: ' + mode;
+                
+                        }
+                    } 
+                  
+                    async function oidcLogin() {
+                        await waitForLogin();
+                        gigya.fidm.oidc.op.redirectToContinue({
+                            opKey: apiKey,
+                            context: encodeURIComponent(context),
+                            login_token: gigya._.apiAdapters.web.tokenStore.get()
+                        });
+                
+                    }
+                
+                    function waitForLogin() {
+                        return new Promise(async (resolve, reject) => {
+                            if (await gigya.hasSession()) {
+                                resolve();
+                            } else {
+                                gigya.socialize.addEventHandlers({
+                                    onLogin: resolve
+                                });
+                
+                                gigya.accounts.showScreenSet({
+                                        screenSet: "Default-RegistrationLogin",
+                                        startScreen: 'gigya-login-screen',
+                                        onLogin: resolve,
+                                        onError: reject,
+                                        callback: resolve
+                                        });
+                                    }
+                                })
+                            }
+                
+                        
+                    var onGigyaServiceReady =  function () {
+                        console.info('Gigya Service is ready.'); 
+                        handleOidc().then(console.log).catch(console.error);
+           
+                      } 
+                
+                </script>
+                </body>
+                </html>
+        `; 
+});
+
+app.use(router.routes());
+app.use(router.allowedMethods()); 
+await app.listen({ port: 8000 });
+ 
