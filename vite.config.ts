@@ -16,8 +16,8 @@ export default defineConfig({
       skipDiagnostics: true,
     }),
     plainText(
-        [/\/LICENSE$/, '**/*.text', /\.glsl$/ , /\.example.ts$/, /.example$/,/\.example.ts$/ ],
-        { namedExport: "plainText", dtsAutoGen: true, distAutoClean: true },
+        [/\/LICENSE$/, '**/*.text', /\.glsl$/ ,/\.example.ts$/,  /.example$/],
+        { namedExport: false, dtsAutoGen: true, distAutoClean: true },
     ),
   ],
 

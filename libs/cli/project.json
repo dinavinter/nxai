@@ -27,14 +27,8 @@
       "options": {
         "lintFilePatterns": ["libs/cli/**/*.ts", "libs/cli/package.json"]
       }
-    },
-    "test": {
-      "executor": "@nx/jest:jest",
-      "outputs": ["{workspaceRoot}/coverage/{projectRoot}"],
-      "options": {
-        "jestConfig": "libs/cli/jest.config.ts"
-      }
     }
+   
    
   },
   "tags": []

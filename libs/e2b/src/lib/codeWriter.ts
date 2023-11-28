@@ -1,7 +1,6 @@
 import e2b, {CodeRuntime, runCode} from "@e2b/sdk";
 import OpenAI from "openai";
-import { Stream } from "openai/streaming";
-import {ChatCompletion, ChatCompletionChunk} from "openai/resources";
+import {ChatCompletion} from "openai/resources";
 // The OpenAI functions we want to use in our model.
 const functions = [
     {
@@ -52,9 +51,29 @@ async function parseGptResponse(response: ChatCompletion) {
 }
 
 const openai = new OpenAI();
+
+export async function codeAgent(system:string,   prompt:string) {
+    const chatCompletion = await openai.chat.completions.create({
+        model: "gpt-3.5-turbo-16k", // Or use 'gpt-3.5-turbo'
+        messages: [
+            {
+                role: "system",
+                content:  system
+            }, 
+            {
+                role: "user",
+                content: prompt,
+            },
+        ],
+        functions,
+    });
+
+    return await parseGptResponse(chatCompletion);
+
+}
 export async function codeForMe(prompt: string="Generate first 100 fibonacci numbers") {
     const chatCompletion = await openai.chat.completions.create({
-        model: "gpt-3.5-turbo", // Or use 'gpt-3.5-turbo'
+        model: "gpt-3.5-turbo-16k", // Or use 'gpt-3.5-turbo'
         messages: [
             {
                 role: "system",

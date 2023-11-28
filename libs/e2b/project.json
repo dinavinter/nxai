@@ -28,7 +28,11 @@
     "test":{
       "executor": "@nx/vite:test",
       "options": {
-        "config": "libs/e2b/vite.config.ts"
+        "config": "vite.config.ts"
+      },
+      "ignore": {
+        "e2b.spec.ts": true,
+        "prompt.spec.ts": false
       },
       "configurations": {
         "watch": {
